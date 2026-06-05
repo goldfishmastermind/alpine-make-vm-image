@@ -483,7 +483,7 @@ SCRIPT=
 [ $# -eq 0 ] || { SCRIPT=$(realpath "$1"); shift; }
 
 if [ "$CLEANUP" != 'no' ]; then
-	trap 'cleanup; exit 0' EXIT
+	trap 'cleanup' EXIT
 	trap 'cleanup; exit 130' HUP INT TERM
 fi
 
