@@ -34,5 +34,34 @@ rc-update add net.eth0 default
 rc-update add net.lo boot
 rc-update add termencoding boot
 
+# ========== UEFI BOOTLOADER FOR ARM64 ==========
+if [ "$(uname -m)" = "aarch64" ]; then
+    step 'Install GRUB for UEFI (aarch64)'
+
+    # Install GRUB and efibootmgr (efibootmgr not strictly needed, but safe)
+    apk add grub-efi efibootmgr
+
+    # Mount the ESP (partition 1)
+    mkdir -p /boot/efi
+    mount /dev/vda1 /boot/efi
+
+    # Install GRUB to the ESP (no NVRAM writes, rely on UEFI firmware)
+    grub-install --target=arm64-efi \
+                 --efi-directory=/boot/efi \
+                 --bootloader-id=Alpine \
+                 --no-nvram
+
+    # Create minimal grub.cfg (adjust kernel/initrd names if needed)
+    mkdir -p /boot/efi/EFI/Alpine
+    cat > /boot/efi/EFI/Alpine/grub.cfg <<EOF
+set root=(hd0,gpt2)
+linux /boot/vmlinuz-lts root=/dev/vda2 modules=ext4 console=ttyAMA0
+initrd /boot/initramfs-lts
+EOF
+
+    # Unmount ESP
+    umount /boot/efi
+fi
+
 step 'List /usr/local/bin'
 ls -la /usr/local/bin
