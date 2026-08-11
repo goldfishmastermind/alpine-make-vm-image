@@ -26,6 +26,11 @@ jobs:
               --fs-skel-chown root:root \
               --script-chroot \
               alpine-bios-$(date +%Y-%m-%d).qcow2 -- ./example/configure.sh
+      - name: Upload BIOS image (x86_64)
+        uses: actions/upload-artifact@v4
+        with:
+          name: alpine-bios-x86_64
+          path: alpine-bios-*.qcow2
 
       - name: Build image for x86_64 with BIOS mode and GPT
         run: |
@@ -39,6 +44,12 @@ jobs:
               --fs-skel-chown root:root \
               --script-chroot \
               alpine-bios-part-$(date +%Y-%m-%d).raw -- ./example/configure.sh
+      # (Optional) Upload raw image if needed
+      - name: Upload BIOS+GPT raw image (x86_64)
+        uses: actions/upload-artifact@v4
+        with:
+          name: alpine-bios-gpt-x86_64
+          path: alpine-bios-part-*.raw
 
       - name: Build image for x86_64 with UEFI mode
         run: |
@@ -52,6 +63,11 @@ jobs:
               --fs-skel-chown root:root \
               --script-chroot \
               alpine-uefi-$(date +%Y-%m-%d).qcow2 -- ./example/configure.sh
+      - name: Upload UEFI image (x86_64)
+        uses: actions/upload-artifact@v4
+        with:
+          name: alpine-uefi-x86_64
+          path: alpine-uefi-*.qcow2
 
       - name: Install qemu-aarch64 and register in binfmt
         uses: jirutka/setup-alpine@v1
@@ -70,6 +86,11 @@ jobs:
               --fs-skel-chown root:root \
               --script-chroot \
               alpine-aarch64-$(date +%Y-%m-%d).qcow2 -- ./example/configure.sh
+      - name: Upload aarch64 image (UEFI‑ready but may need extra boot setup)
+        uses: actions/upload-artifact@v4
+        with:
+          name: alpine-aarch64
+          path: alpine-aarch64-*.qcow2
 
   test-alpine:
     name: Test on Alpine
@@ -77,13 +98,11 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      # We must run this outside the chroot.
       - run: sudo modprobe nbd max_part=16
 
       - name: Set up Alpine Linux v3.22
         uses: jirutka/setup-alpine@v1
         with:
-          # XXX: v3.23 doesn't work here, running package triggers results in "unshare: Invalid argument"
           branch: v3.22
 
       - name: Build image for x86_64 with BIOS mode and without GPT
@@ -98,6 +117,11 @@ jobs:
               --script-chroot \
               alpine-bios-$(date +%Y-%m-%d).qcow2 -- ./example/configure.sh
         shell: alpine.sh --root {0}
+      - name: Upload BIOS image (x86_64) [Alpine runner]
+        uses: actions/upload-artifact@v4
+        with:
+          name: alpine-bios-x86_64-alpine
+          path: alpine-bios-*.qcow2
 
       - name: Build image for x86_64 with UEFI mode
         run: |
@@ -112,6 +136,11 @@ jobs:
               --script-chroot \
               alpine-uefi-$(date +%Y-%m-%d).qcow2 -- ./example/configure.sh
         shell: alpine.sh --root {0}
+      - name: Upload UEFI image (x86_64) [Alpine runner]
+        uses: actions/upload-artifact@v4
+        with:
+          name: alpine-uefi-x86_64-alpine
+          path: alpine-uefi-*.qcow2
 
       - name: Install qemu-aarch64 and register in binfmt
         uses: jirutka/setup-alpine@v1
@@ -119,7 +148,6 @@ jobs:
           arch: aarch64
           shell-name: alpine-aarch64.sh
 
-      # Note: We cannot run alpine-make-vm-image inside emulated chroot due to nbd.
       - name: Build image for aarch64
         run: |
           ./alpine-make-vm-image \
@@ -133,3 +161,8 @@ jobs:
               --script-chroot \
               alpine-aarch64-$(date +%Y-%m-%d).qcow2 -- ./example/configure.sh
         shell: alpine.sh --root {0}
+      - name: Upload aarch64 image [Alpine runner]
+        uses: actions/upload-artifact@v4
+        with:
+          name: alpine-aarch64-alpine
+          path: alpine-aarch64-*.qcow2
