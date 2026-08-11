@@ -1,54 +1,53 @@
-name: Build ARM64 QCOW2
+name: Build Minimal Alpine ARM64 UEFI
 
-on: [push, workflow_dispatch]  # run on push or manually
+on: [push, workflow_dispatch]
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Install QEMU (for arm64 emulation + disk tools)
+      - name: Install QEMU tools
         run: |
           sudo apt-get update
           sudo apt-get install -y qemu-user-static qemu-utils
 
-      - name: Download alpine-make-vm-image script
+      - name: Download alpine-make-vm-image
         run: |
           wget https://raw.githubusercontent.com/alpinelinux/alpine-make-vm-image/master/alpine-make-vm-image
           chmod +x alpine-make-vm-image
 
-      - name: Create minimal config files
+      - name: Setup minimal config
         run: |
-          # Repositories (edge for latest packages, stable as fallback)
+          # Stable repositories
           cat > repos <<EOF
           http://dl-cdn.alpinelinux.org/alpine/latest-stable/main
           http://dl-cdn.alpinelinux.org/alpine/latest-stable/community
           EOF
 
-          # Packages – add what you need (openssh is common)
-          echo "openssh" > packages
-
-          # Configure script runs inside the VM
+          # Configure script (sets root password + ensures serial console works)
           cat > configure.sh <<'EOF'
           #!/bin/sh
-          # Enable SSH and set root password (optional)
-          rc-update add sshd default
+          # Set root password to "alpine" so you can log in via UTM
           echo "root:alpine" | chpasswd
+          # Make sure serial console is enabled
+          echo "ttyAMA0::respawn:/sbin/getty -L ttyAMA0 115200 vt100" >> /etc/inittab
           EOF
           chmod +x configure.sh
 
-      - name: Build ARM64 QCOW2 image
+      - name: Build UEFI QCOW2 (base system only, no extra packages)
         run: |
           sudo ./alpine-make-vm-image \
             --arch aarch64 \
             --image-format qcow2 \
+            --boot-mode UEFI \
             --repositories-file repos \
-            --packages "$(cat packages)" \
+            --kernel-append "console=ttyAMA0" \
             --script-chroot \
-            alpine-arm64.qcow2 \
+            alpine-utm.qcow2 \
             ./configure.sh
 
-      - name: Upload artifact (so you can download it)
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: alpine-arm64-image
-          path: alpine-arm64.qcow2
+          name: alpine-utm-uefi
+          path: alpine-utm.qcow2
