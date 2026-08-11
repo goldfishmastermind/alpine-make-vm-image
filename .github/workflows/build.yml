@@ -18,18 +18,14 @@ jobs:
 
       - name: Setup minimal config
         run: |
-          # Stable repositories
           cat > repos <<EOF
           http://dl-cdn.alpinelinux.org/alpine/latest-stable/main
           http://dl-cdn.alpinelinux.org/alpine/latest-stable/community
           EOF
 
-          # Configure script (sets root password + ensures serial console works)
           cat > configure.sh <<'EOF'
           #!/bin/sh
-          # Set root password to "alpine" so you can log in via UTM
           echo "root:alpine" | chpasswd
-          # Make sure serial console is enabled
           echo "ttyAMA0::respawn:/sbin/getty -L ttyAMA0 115200 vt100" >> /etc/inittab
           EOF
           chmod +x configure.sh
@@ -41,7 +37,6 @@ jobs:
             --image-format qcow2 \
             --boot-mode UEFI \
             --repositories-file repos \
-            --kernel-append "console=ttyAMA0" \
             --script-chroot \
             alpine-utm.qcow2 \
             ./configure.sh
