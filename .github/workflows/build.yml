@@ -1,0 +1,54 @@
+name: Build ARM64 QCOW2
+
+on: [push, workflow_dispatch]  # run on push or manually
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install QEMU (for arm64 emulation + disk tools)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y qemu-user-static qemu-utils
+
+      - name: Download alpine-make-vm-image script
+        run: |
+          wget https://raw.githubusercontent.com/alpinelinux/alpine-make-vm-image/master/alpine-make-vm-image
+          chmod +x alpine-make-vm-image
+
+      - name: Create minimal config files
+        run: |
+          # Repositories (edge for latest packages, stable as fallback)
+          cat > repos <<EOF
+          http://dl-cdn.alpinelinux.org/alpine/latest-stable/main
+          http://dl-cdn.alpinelinux.org/alpine/latest-stable/community
+          EOF
+
+          # Packages – add what you need (openssh is common)
+          echo "openssh" > packages
+
+          # Configure script runs inside the VM
+          cat > configure.sh <<'EOF'
+          #!/bin/sh
+          # Enable SSH and set root password (optional)
+          rc-update add sshd default
+          echo "root:alpine" | chpasswd
+          EOF
+          chmod +x configure.sh
+
+      - name: Build ARM64 QCOW2 image
+        run: |
+          sudo ./alpine-make-vm-image \
+            --arch aarch64 \
+            --image-format qcow2 \
+            --repositories-file repos \
+            --packages "$(cat packages)" \
+            --script-chroot \
+            alpine-arm64.qcow2 \
+            ./configure.sh
+
+      - name: Upload artifact (so you can download it)
+        uses: actions/upload-artifact@v4
+        with:
+          name: alpine-arm64-image
+          path: alpine-arm64.qcow2
