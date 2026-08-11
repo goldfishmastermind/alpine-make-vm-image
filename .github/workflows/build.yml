@@ -1,10 +1,17 @@
-- name: Download official Alpine cloud image
-  run: |
-    wget https://dl-cdn.alpinelinux.org/alpine/v3.20/releases/aarch64/alpine-cloud-3.20.0-aarch64.qcow2
-    # Optional: customize it later with virt-customize or a startup script
+name: Get Alpine Cloud Image (ARM64, UEFI-ready)
 
-- name: Upload artifact
-  uses: actions/upload-artifact@v4
-  with:
-    name: alpine-cloud-uefi
-    path: alpine-cloud-*.qcow2
+on: [push, workflow_dispatch]
+
+jobs:
+  download:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download official Alpine ARM64 cloud image
+        run: |
+          wget https://dl-cdn.alpinelinux.org/alpine/v3.20/releases/aarch64/alpine-cloud-3.20.0-aarch64.qcow2
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: alpine-utm
+          path: alpine-cloud-*.qcow2
