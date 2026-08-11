@@ -1,48 +1,10 @@
-name: Build Minimal Alpine ARM64 UEFI
+- name: Download official Alpine cloud image
+  run: |
+    wget https://dl-cdn.alpinelinux.org/alpine/v3.20/releases/aarch64/alpine-cloud-3.20.0-aarch64.qcow2
+    # Optional: customize it later with virt-customize or a startup script
 
-on: [push, workflow_dispatch]
-
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Install QEMU tools
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y qemu-user-static qemu-utils
-
-      - name: Download alpine-make-vm-image
-        run: |
-          wget https://raw.githubusercontent.com/alpinelinux/alpine-make-vm-image/master/alpine-make-vm-image
-          chmod +x alpine-make-vm-image
-
-      - name: Setup minimal config
-        run: |
-          cat > repos <<EOF
-          http://dl-cdn.alpinelinux.org/alpine/latest-stable/main
-          http://dl-cdn.alpinelinux.org/alpine/latest-stable/community
-          EOF
-
-          cat > configure.sh <<'EOF'
-          #!/bin/sh
-          echo "root:alpine" | chpasswd
-          echo "ttyAMA0::respawn:/sbin/getty -L ttyAMA0 115200 vt100" >> /etc/inittab
-          EOF
-          chmod +x configure.sh
-
-      - name: Build UEFI QCOW2 (base system only, no extra packages)
-        run: |
-          sudo ./alpine-make-vm-image \
-            --arch aarch64 \
-            --image-format qcow2 \
-            --boot-mode UEFI \
-            --repositories-file repos \
-            --script-chroot \
-            alpine-utm.qcow2 \
-            ./configure.sh
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: alpine-utm-uefi
-          path: alpine-utm.qcow2
+- name: Upload artifact
+  uses: actions/upload-artifact@v4
+  with:
+    name: alpine-cloud-uefi
+    path: alpine-cloud-*.qcow2
